@@ -1,0 +1,33 @@
+---
+- hosts: localhost
+  tasks:
+
+    - name: get current directory
+      command: pwd
+      register: pwd_result
+
+    - name: build flask container
+      docker_image:
+        path: pwd_result.stdout
+        name: eremeev/flask
+        state: present
+
+    - name: start redis container
+      docker:
+        docker_api_version: 1.18
+        name: myredis
+        image: redis
+        expose: "6379"
+        state: reloaded
+
+    - name: start flaks app container
+      docker:
+        docker_api_version: 1.18
+        name: myflask
+        image: eremeev/flask
+        volumes: "{{ pwd_result.stdout }}:/usr/src/"
+        expose: "5000"
+        ports: "5000:5000"
+        links: myredis
+        command: python /usr/src/app.py
+        state: reloaded
